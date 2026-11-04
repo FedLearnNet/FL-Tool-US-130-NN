@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import os
 import re
+from pathlib import Path
 from typing import Any, Optional
 
+import joblib
 import numpy as np
 
 from pyfedappwrap.engine.federated import AppAggregator, FLNetMessageMetaDTO
@@ -32,6 +35,21 @@ class MeanVectorAggregator(AppAggregator):
             return self._aggregate_mlp(data, n_clients, meta)
 
         return np.mean(np.stack(data), axis=0)
+
+    def save_model(self, aggregated: Any) -> Optional[str]:
+        if not (isinstance(aggregated, dict) and "coefs" in aggregated):
+            return None
+        path = Path(os.environ.get("MODEL_DIR", "./model/")) / "aggregated_model.joblib"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(
+            {
+                "coefs": aggregated.get("coefs"),
+                "intercepts": aggregated.get("intercepts"),
+                "feature_columns": aggregated.get("feature_columns"),
+            },
+            path,
+        )
+        return path.name
 
     @staticmethod
     def _aggregate_mlp(
