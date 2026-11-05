@@ -326,6 +326,18 @@ class FederatedHospitalReadmissionClient(
         if self.model is not None:
             return
         artifact = joblib.load(self._model_path())
-        self.model = artifact["model"]
         self.feature_columns = artifact["feature_columns"]
-        self.target_column = artifact["target_column"]
+        if "model" in artifact:
+            # Produced by this client's own _save(): a fitted estimator, ready to use.
+            self.model = artifact["model"]
+            self.target_column = artifact["target_column"]
+        else:
+            # Produced by the aggregator's save_model(): raw averaged layer weights, not a fitted
+            # estimator - rebuild one the same way run_train() seeds a model from global weights.
+            cfg = self._cfg()
+            self.target_column = cfg.target_column
+            self.model = _seed(
+                _new_model(cfg, cfg.local_max_iter),
+                {"coefs": artifact["coefs"], "intercepts": artifact["intercepts"]},
+                len(self.feature_columns),
+            )
