@@ -1,4 +1,3 @@
-import os
 import time
 from dataclasses import fields
 from pathlib import Path
@@ -31,10 +30,13 @@ from helper import (
 # Estimator + metrics live in the shared model module so the app, the aggregator and the offline
 # evaluation harness all use the identical model and scoring.
 from model import (
+    AGGREGATED_MODEL_FILE,
     CLASS_NAMES,
+    MODEL_FILE,
     align as _align,
     feature_importance_table as _feature_importance_table,
     fit_model as _fit_model,
+    model_dir as _model_dir,
     new_model_from_cfg,
     n_parameters as _n_parameters,
     parse_global as _parse_global,
@@ -309,11 +311,8 @@ class FederatedHospitalReadmissionClient(
     def _safe_name(self) -> str:
         return "".join(c if c.isalnum() or c in "-_" else "_" for c in str(self.app_id or "client"))
 
-    def _model_path(self) -> Path:
-        return Path(os.environ.get("MODEL_DIR", "./model/")) / "model.joblib"
-
     def _save(self) -> str:
-        path = self._model_path()
+        path = _model_dir() / MODEL_FILE
         path.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(
             {"model": self.model, "feature_columns": self.feature_columns,
@@ -325,7 +324,26 @@ class FederatedHospitalReadmissionClient(
     def _load(self) -> None:
         if self.model is not None:
             return
-        artifact = joblib.load(self._model_path())
-        self.model = artifact["model"]
+        # A model trained in this container (_save) or stored by the platform from the aggregator
+        # (save_model) - the inference tool only gets the one that was uploaded.
+        path = next((p for p in (_model_dir() / MODEL_FILE, _model_dir() / AGGREGATED_MODEL_FILE)
+                     if p.exists()), None)
+        if path is None:
+            raise FileNotFoundError(
+                f"No model found in {_model_dir()} (expected {MODEL_FILE} or {AGGREGATED_MODEL_FILE})")
+        artifact = joblib.load(path)
         self.feature_columns = artifact["feature_columns"]
-        self.target_column = artifact["target_column"]
+        if "model" in artifact:
+            # Produced by this client's own _save(): a fitted estimator, ready to use.
+            self.model = artifact["model"]
+            self.target_column = artifact["target_column"]
+        else:
+            # Produced by the aggregator's save_model(): raw averaged layer weights, not a fitted
+            # estimator - rebuild one the same way run_train() seeds a model from global weights.
+            cfg = self._cfg()
+            self.target_column = cfg.target_column
+            self.model = _seed(
+                _new_model(cfg, cfg.local_max_iter),
+                {"coefs": artifact["coefs"], "intercepts": artifact["intercepts"]},
+                len(self.feature_columns),
+            )
