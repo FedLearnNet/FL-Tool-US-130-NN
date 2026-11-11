@@ -1,5 +1,13 @@
 config:
   hyperparams:
+  - default: '10'
+    description: MLP batch size.
+    maxValue: null
+    minValue: null
+    name: batch_size
+    options: []
+    pattern: null
+    type: STRING
   - default: hospital-readmission
     description: Base communication id. For multi-round training the app appends
       -round-N so every round has a unique id.
@@ -10,7 +18,8 @@ config:
     pattern: null
     type: STRING
   - default: federated_readmission_predictions.csv
-    description: CSV file written by each client into its local output directory.
+    description: CSV file written by each client into its local output 
+      directory.
     maxValue: null
     minValue: null
     name: output_filename
@@ -18,10 +27,9 @@ config:
     pattern: null
     type: STRING
   - default: '10'
-    description: Number of federated train/aggregate rounds. Increase when the
-      federated controller processes one communication id per round.
+    description: Number of federated train/aggregate rounds.
     maxValue: null
-    minValue: 1
+    minValue: 1.0
     name: federated_rounds
     options: []
     pattern: null
@@ -29,7 +37,7 @@ config:
   - default: '15'
     description: Local MLP iteration budget per federated round.
     maxValue: null
-    minValue: 1
+    minValue: 1.0
     name: local_max_iter
     options: []
     pattern: null
@@ -66,9 +74,9 @@ config:
     options: []
     pattern: null
     type: BOOLEAN
-  - default: '12,8'
-    description: Comma-separated hidden layer sizes. Default mirrors the simple
-      Kaggle-style diabetes NN with 12 hidden units, then 8 hidden units.
+  - default: 12,8
+    description: Comma-separated hidden layer sizes. Default mirrors a simple 
+      diabetes NN with 12 hidden units, then 8 hidden units.
     maxValue: null
     minValue: null
     name: hidden_layer_sizes
@@ -120,16 +128,8 @@ config:
     options: []
     pattern: null
     type: FLOAT
-  - default: '10'
-    description: MLP batch size.
-    maxValue: null
-    minValue: null
-    name: batch_size
-    options: []
-    pattern: null
-    type: STRING
   - default: balanced
-    description: Class weighting — use 'balanced' to counter the ~11%
+    description: Class weighting — use 'balanced' to counter the ~11% 
       readmission base rate
     maxValue: null
     minValue: null
@@ -146,7 +146,7 @@ config:
     indexCol: null
     maxValue: null
     minValue: null
-    mode: null
+    mode: BOTH
     name: data
     required: true
     shape: null
@@ -154,13 +154,13 @@ config:
     type: CSV
   output:
   - delimiter: ','
-    description: Per-patient predicted readmission label and probability
+    description: Per-patient predicted readmission label and probability 
       (validation split during training, all rows during prediction)
     hasHeader: true
     indexCol: null
     maxValue: null
     minValue: null
-    mode: null
+    mode: BOTH
     name: predictions
     required: false
     shape: null
@@ -172,7 +172,7 @@ config:
     indexCol: null
     maxValue: null
     minValue: null
-    mode: null
+    mode: BOTH
     name: coefficients
     required: false
     shape: null
@@ -185,7 +185,7 @@ config:
     indexCol: null
     maxValue: null
     minValue: null
-    mode: null
+    mode: BOTH
     name: explanation
     required: false
     shape: null
@@ -197,20 +197,17 @@ config:
     indexCol: null
     maxValue: null
     minValue: null
-    mode: null
+    mode: BOTH
     name: report
     required: false
     shape: null
     tabularSchema: null
     type: TEXT
 info:
-  longDescription: Federated neural-network training for US-130 diabetic hospital
-    readmission prediction. Each client trains locally, sends MLP layer weights
-    only, and receives a weighted mean global model for the next round.
-  name: Federated Hospital Readmission Prediction NN
-  shortDescription: Train a federated 30-day hospital readmission model without sharing
-    raw patient rows
-  slug: federated-hospital-readmission-prediction-nn
-  sourceUrl:
-    https://github.com/FedLearnNet/FL-Tool-US-130-NN
+  longDescription: null
+  name: US130-Hospital Readmission Federated NN
+  shortDescription: Predict 30-day hospital readmission for diabetic patients 
+    using a federated neural network
+  slug: us130-hospital-readmission-federated-nn
+  sourceUrl: https://github.com/FedLearnNet/FL-Tool-US-130-NN
   type: ANALYSIS
