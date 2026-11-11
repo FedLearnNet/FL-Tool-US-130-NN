@@ -70,3 +70,5 @@ evaluation
 result_fl
 build-and-push.sh
 build-and-push_local.sh
+
+.env
