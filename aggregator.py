@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any, Optional
 
 import joblib
 import numpy as np
 
+from pyfedappwrap.engine.config.system_config import system_settings
 from pyfedappwrap.engine.federated import AppAggregator, FLNetMessageMetaDTO
 
-from model import AGGREGATED_MODEL_FILE, model_dir
+from model import AGGREGATED_MODEL_FILE
 
 
 def _round_from_meta(meta: Optional[FLNetMessageMetaDTO]) -> Optional[int]:
@@ -39,7 +41,7 @@ class MeanVectorAggregator(AppAggregator):
     def save_model(self, aggregated: Any) -> Optional[str]:
         if not (isinstance(aggregated, dict) and "coefs" in aggregated):
             return None
-        path = model_dir() / AGGREGATED_MODEL_FILE
+        path = Path(system_settings.model_dir) / AGGREGATED_MODEL_FILE
         path.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(
             {

@@ -121,6 +121,11 @@ def preprocess_diabetic(
     # Replace sentinel missing values
     df.replace("?", np.nan, inplace=True)
 
+    # Projects may export the age bracket as plain "age"
+    if "age_age_group_bracket" not in df.columns and "age" in df.columns \
+            and df["age"].dropna().astype(str).isin(AGE_MAP.keys()).all():
+        df.rename(columns={"age": "age_age_group_bracket"}, inplace=True)
+
     # Drop irrelevant columns
     df.drop(columns=[c for c in DROP_COLS if c in df.columns], inplace=True)
 

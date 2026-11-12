@@ -7,9 +7,7 @@ weights, never raw patient rows.
 """
 from __future__ import annotations
 
-import os
 import warnings
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -29,15 +27,12 @@ from sklearn.utils.class_weight import compute_sample_weight
 
 CLASS_NAMES = ["Not Readmitted", "Readmitted <30d"]
 
-# Model files in MODEL_DIR: the client's _save() writes MODEL_FILE, the aggregator's save_model()
-# writes AGGREGATED_MODEL_FILE. Separate names, because a coordinator clinic writes both in the same
-# container; the client's _load() reads whichever of the two is present.
+# Model files in the framework's system_settings.model_dir: the client's _save() writes MODEL_FILE,
+# the aggregator's save_model() writes AGGREGATED_MODEL_FILE. Separate names, because a coordinator
+# clinic writes both in the same container; the client's _load() reads whichever of the two is present.
 MODEL_FILE = "model.joblib"
 AGGREGATED_MODEL_FILE = "aggregated_model.joblib"
 
-
-def model_dir() -> Path:
-    return Path(os.environ.get("MODEL_DIR", "./model/"))
 
 DEFAULT_HIDDEN_LAYER_SIZES = (12, 8)
 DEFAULT_ACTIVATION = "relu"

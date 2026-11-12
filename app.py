@@ -6,6 +6,7 @@ from typing import Any, Optional
 import joblib
 import numpy as np
 import pandas as pd
+from pyfedappwrap.engine.config.system_config import system_settings
 from pyfedappwrap.learning.federated import BaseFederatedApp
 from pyfedappwrap.learning.metrics import EVAL_METRICS, MetricName
 from pyfedappwrap.learning.privacy import secure_count
@@ -36,7 +37,6 @@ from model import (
     align as _align,
     feature_importance_table as _feature_importance_table,
     fit_model as _fit_model,
-    model_dir as _model_dir,
     new_model_from_cfg,
     n_parameters as _n_parameters,
     parse_global as _parse_global,
@@ -66,6 +66,13 @@ def _round_communication_id(base: str, round_nr: int, n_rounds: int) -> str:
     if "{round}" in base:
         return base.format(round=round_nr)
     return f"{base}-round-{round_nr}"
+
+
+def _missing_target_message(df: pd.DataFrame, target_col: str) -> str:
+    if {"feature_name", "feature_value"}.issubset(df.columns):
+        return ("Input is in long format (feature_name/feature_value), one column per feature is "
+                "expected. Enable the wide format in the project's dataset export.")
+    return f"Target column '{target_col}' not in the input. Columns: {', '.join(map(str, df.columns))}"
 
 
 def _new_model(cfg, max_iter: int):
@@ -105,6 +112,8 @@ class FederatedHospitalReadmissionClient(
 
         # Preprocess once; realign to the (possibly wider) global feature set per round via reindex.
         X, y, local_features = preprocess_diabetic(data.data, target_col=cfg.target_column, is_training=True)
+        if y is None:
+            raise ValueError(_missing_target_message(data.data, cfg.target_column))
         feature_frame = pd.DataFrame(X, columns=local_features)
         train_idx, val_idx = train_test_split(
             np.arange(len(y)), test_size=cfg.test_size, random_state=cfg.random_state, stratify=y,
@@ -312,7 +321,7 @@ class FederatedHospitalReadmissionClient(
         return "".join(c if c.isalnum() or c in "-_" else "_" for c in str(self.app_id or "client"))
 
     def _save(self) -> str:
-        path = _model_dir() / MODEL_FILE
+        path = Path(system_settings.model_dir) / MODEL_FILE
         path.parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(
             {"model": self.model, "feature_columns": self.feature_columns,
@@ -326,11 +335,11 @@ class FederatedHospitalReadmissionClient(
             return
         # A model trained in this container (_save) or stored by the platform from the aggregator
         # (save_model) - the inference tool only gets the one that was uploaded.
-        path = next((p for p in (_model_dir() / MODEL_FILE, _model_dir() / AGGREGATED_MODEL_FILE)
-                     if p.exists()), None)
+        model_dir = Path(system_settings.model_dir)
+        path = next((p for p in (model_dir / MODEL_FILE, model_dir / AGGREGATED_MODEL_FILE) if p.exists()), None)
         if path is None:
             raise FileNotFoundError(
-                f"No model found in {_model_dir()} (expected {MODEL_FILE} or {AGGREGATED_MODEL_FILE})")
+                f"No model found in {model_dir} (expected {MODEL_FILE} or {AGGREGATED_MODEL_FILE})")
         artifact = joblib.load(path)
         self.feature_columns = artifact["feature_columns"]
         if "model" in artifact:
